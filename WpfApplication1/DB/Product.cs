@@ -18,5 +18,6 @@ namespace WpfApplication1.DB
         public Nullable<int> Bgg_ID { get; set; }
         public string Bgg_Name { get; set; }
         public Nullable<decimal> Rating { get; set; }
+        public bool IsFound { get; set; }
     }
 }

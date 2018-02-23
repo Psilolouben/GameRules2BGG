@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="GameRules2BGGModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="GameRules2BGGModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <EntityType Name="Product">
           <Key>
             <PropertyRef Name="ID" />
@@ -13,12 +13,12 @@
           <Property Name="Bgg_ID" Type="int" />
           <Property Name="Bgg_Name" Type="nvarchar(max)" Nullable="false" />
           <Property Name="Rating" Type="decimal" Precision="18" Scale="3" />
+          <Property Name="IsFound" Type="bit" Nullable="false" />
         </EntityType>
         <EntityContainer Name="GameRules2BGGModelStoreContainer">
           <EntitySet Name="Product" EntityType="Self.Product" Schema="dbo" store:Type="Tables" />
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="GameRules2BGGModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -30,6 +30,7 @@
           <Property Name="Bgg_ID" Type="Int32" />
           <Property Name="Bgg_Name" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="Rating" Type="Decimal" Precision="18" Scale="3" />
+          <Property Name="IsFound" Type="Boolean" Nullable="false" />
         </EntityType>
         <EntityContainer Name="GameRules2BGGEntities" annotation:LazyLoadingEnabled="true">
           <EntitySet Name="Products" EntityType="Self.Product" />
@@ -43,6 +44,7 @@
           <EntitySetMapping Name="Products">
             <EntityTypeMapping TypeName="GameRules2BGGModel.Product">
               <MappingFragment StoreEntitySet="Product">
+                <ScalarProperty Name="IsFound" ColumnName="IsFound" />
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="Bgg_ID" ColumnName="Bgg_ID" />
                 <ScalarProperty Name="Bgg_Name" ColumnName="Bgg_Name" />
