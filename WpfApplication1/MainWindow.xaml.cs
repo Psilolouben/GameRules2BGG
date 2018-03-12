@@ -30,7 +30,19 @@ namespace WpfApplication1
 
         private void btnStart_Click(object sender, RoutedEventArgs e)
         {
-            var url = @"https://www.thegamerules.com/el/arxiki/by,%60p%60.product_availability/dirAsc/results,1-150?language=el-GR&categorylayout=default";
+
+            var counter = 1;
+
+            while (counter <= 1500)
+            {
+                ProcessData(counter);
+                counter += 150;
+            }
+        }
+
+        private void ProcessData(int start)
+        {
+            var url = @"https://www.thegamerules.com/el/arxiki/by,%60p%60.product_availability/dirAsc/results," + start + "-" + (start + 149) + "?language=el-GR&categorylayout=default";
 
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
@@ -41,18 +53,19 @@ namespace WpfApplication1
 
             string data = readStream.ReadToEnd();
 
-            var splitData =data.Split(new string[] { "catProductTitle" }, StringSplitOptions.None);
+            var splitData = data.Split(new string[] { "catProductTitle" }, StringSplitOptions.None);
             var bgTitles = new List<string>();
             var bgIds = new List<int>();
             var allProducts = new List<DB.Product>();
             var titlesToRetrieve = new List<string>();
+            var dbEnt = new DB.GameRules2BGGEntities();
 
-            foreach(var line in splitData)
+            foreach (var line in splitData)
             {
                 var l = line.Split('>')[2].Split('<')[0];
-                if (l.Contains("Sleeves") ||l.Contains("Dice Set") || l.Contains("Organizer") || l.Contains("D6") || l.Contains("Tokens") || l.Contains("&")) 
+                if (l.Contains("Sleeves") || l.Contains("Dice Set") || l.Contains("Organizer") || l.Contains("D6") || l.Contains("Tokens") || l.Contains("&"))
                     continue;
-                l = l.Replace("(Exp.)","").Replace("(Exp)","").Replace("(", "").Replace(")", "");
+                l = l.Replace("(Exp.)", "").Replace("(Exp)", "").Replace("(", "").Replace(")", "");
                 var existing = RetrieveFromDB(l);
                 if (existing != null)
                     allProducts.Add(existing);
@@ -61,13 +74,17 @@ namespace WpfApplication1
                     byte[] bytes = Encoding.UTF8.GetBytes(l);
                     l = Encoding.UTF8.GetString(bytes);
 
-                    if(l != "\n")
-                      titlesToRetrieve.Add(l.TrimEnd());
+                    if (l != "\n")
+                        titlesToRetrieve.Add(l.TrimEnd());
                 }
-             }
+            }
 
-            foreach(var title in titlesToRetrieve)
+            foreach (var title in titlesToRetrieve)
             {
+                if (dbEnt.Products.Any(ds => ds.Bgg_Name == title))
+                {
+                    continue;
+                }
                 System.Threading.Thread.Sleep(2000);
                 var idUrl = @"https://www.boardgamegeek.com/xmlapi2/search?query=" + title + "&exact=1&type=boardgame,boardgameexpansion";
                 HttpWebRequest idrequest = (HttpWebRequest)WebRequest.Create(idUrl);
@@ -81,14 +98,27 @@ namespace WpfApplication1
                 var bgg_id = default(int);
                 if (xmlDoc.DocumentElement.SelectNodes("item").Count > 0)
                 {
-                  bgg_id = Convert.ToInt32(xmlDoc.DocumentElement.SelectNodes("item")[0].Attributes[1].Value);
-                  bgIds.Add(bgg_id);
+                    bgg_id = Convert.ToInt32(xmlDoc.DocumentElement.SelectNodes("item")[0].Attributes[1].Value);
+                    bgIds.Add(bgg_id);
+                }
+                else
+                {
+                    if (!dbEnt.Products.Any(ds => ds.Bgg_Name == title))
+                    {
+                        var unfoundBGame = new DB.Product();
+                        unfoundBGame.Bgg_Name = title;
+                        unfoundBGame.IsFound = false;
+
+
+                        dbEnt.Products.Add(unfoundBGame);
+                        dbEnt.SaveChanges();
+                    }
                 }
             }
 
             var query = string.Join(",", bgIds);
 
-            var toFindUrl = @"https://www.boardgamegeek.com/xmlapi2/thing?id=" + query + "&exact=1&type=boardgame,boardgameexpansion";
+            var toFindUrl = @"https://www.boardgamegeek.com/xmlapi2/thing?id=" + query + "&exact=1&type=boardgame,boardgameexpansion&stats=1";
             HttpWebRequest toFindrequest = (HttpWebRequest)WebRequest.Create(toFindUrl);
             HttpWebResponse toFindresponse = (HttpWebResponse)toFindrequest.GetResponse();
 
@@ -96,8 +126,27 @@ namespace WpfApplication1
 
             XmlDocument toFindxmlDoc = new XmlDocument();
             toFindxmlDoc.Load(toFindreceiveStream);
-        }
 
+            var finalBGameList = new List<DB.Product>();
+
+            foreach (var bg_node in toFindxmlDoc.SelectNodes("/items/item"))
+            {
+                var fbg = new DB.Product();
+
+                fbg.Rating = Convert.ToDecimal(((XmlNode)bg_node).SelectNodes("statistics/ratings/average")[0].Attributes[0].Value);
+                fbg.IsFound = true;
+                fbg.Bgg_ID = Convert.ToInt32(((XmlNode)bg_node).Attributes[1].Value);
+                fbg.Bgg_Name = ((XmlNode)bg_node).SelectSingleNode("name").Attributes[2].Value;
+
+                finalBGameList.Add(fbg);
+
+                if (!dbEnt.Products.Any(ds => ds.Bgg_Name == fbg.Bgg_Name))
+                {
+                    dbEnt.Products.Add(fbg);
+                    dbEnt.SaveChanges();
+                }
+            }
+        }
 
         private DB.Product RetrieveFromDB(string gameTitle)
         {
