@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.Net;
 using System.IO;
 using System.Xml;
+using System.Xml.Serialization;
 
 namespace WpfApplication1
 {
@@ -32,7 +33,6 @@ namespace WpfApplication1
         {
 
             var counter = 1;
-
             while (counter <= 1500)
             {
                 ProcessData(counter);
@@ -146,6 +146,11 @@ namespace WpfApplication1
                     dbEnt.SaveChanges();
                 }
             }
+
+            ExportToXML();
+
+
+
         }
 
         private DB.Product RetrieveFromDB(string gameTitle)
@@ -155,6 +160,19 @@ namespace WpfApplication1
             return dbe.Products.FirstOrDefault(sd => sd.Bgg_Name == gameTitle);
 
 
+        }
+
+        private void ExportToXML()
+        {
+            var dbEnt = new DB.GameRules2BGGEntities();
+            XmlDocument xmlDoc = new XmlDocument();
+            MemoryStream xmlStream = new MemoryStream();
+            XmlSerializer xmlSerializer = new XmlSerializer(typeof(List<DB.Product>));
+            xmlSerializer.Serialize(xmlStream, dbEnt.Products.ToList());
+            xmlStream.Position = 0;
+            //Loads the XML document from the specified string.
+            xmlDoc.Load(xmlStream);
+            xmlDoc.Save(System.AppDomain.CurrentDomain.BaseDirectory + @"\games.xml");
         }
     }
 }
